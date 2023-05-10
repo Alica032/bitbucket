@@ -1,0 +1,10 @@
+bot:
+  name: vk_bitbucket_bot
+  token: <your_token>
+
+server:
+  host: localhost
+  port: 8080
+  test_host: https://98da-188-162-65-242.ngrok-free.app
+
+first_run: true
