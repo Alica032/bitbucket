@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	// "path/filepath"
 )
 
 var (
@@ -15,36 +17,18 @@ var (
 	badRequest  = errors.New("Bad Request")
 )
 
-type Chat struct {
-	ID        int    `json:"id"`
-	FirstName string `json:"first_name"`
-	Username  string `json:"username"`
-	Type      string `json:"type"`
-}
-
-type From struct {
-	ID           int    `json:"id"`
-	IsBot        bool   `json:"is_bot"`
-	FirstName    string `json:"first_name"`
-	Username     string `json:"username"`
-	LanguageCode string `json:"language_code"`
-}
-
-type Message struct {
-	ID      int    `json:"message_id"`
-	ChatMsg Chat   `json:"chat"`
-	FromMSG From   `json:"from"`
-	Date    int    `json:"date"`
-	Text    string `json:"text"`
-}
-
-type BotResponse struct {
-	ID  int     `json:"update_id"`
-	Msg Message `json:"message"`
-}
-
 type BotApi struct {
-	token string
+	token    string
+	startMsg *StartRequest
+}
+
+func initBotApi(token string) *BotApi {
+	ba := BotApi{token: token}
+	var startMsg StartRequest
+	file, _ := os.ReadFile("data/start_msg.json")
+	_ = json.Unmarshal(file, &startMsg)
+	ba.startMsg = &startMsg
+	return &ba
 }
 
 func (ba *BotApi) makeRequest(url string) ([]byte, error) {
@@ -56,7 +40,7 @@ func (ba *BotApi) makeRequest(url string) ([]byte, error) {
 		log.Println("Error on response.\n", err)
 		return nil, err
 	}
-	if resp.StatusCode == 404 {
+	if resp.StatusCode != 200 {
 		log.Println(err)
 		return nil, badRequest
 	}
@@ -81,21 +65,22 @@ func (ba *BotApi) registerWebhook(webhookUrl string) bool {
 	return true
 }
 
-func (ba *BotApi) startMessage(chatId int, text string) bool {
+func (ba *BotApi) startMessage(chatId int) bool {
 	url := telegramURL.JoinPath("bot"+ba.token, "sendMessage")
 
-	values := map[string]any{"chat_id": chatId, "text": text}
+	values := *ba.startMsg
+	values.ID = chatId
 	buf, _ := json.Marshal(values)
+
 	resp, err := http.Post(url.String(), "application/json", bytes.NewBuffer(buf))
 
 	if err != nil {
 		log.Println("Error on response.\n", err)
 		return false
 	}
-	if resp.StatusCode == 404 {
+	if resp.StatusCode != 200 {
 		log.Println(badRequest)
 		return false
 	}
-
 	return true
 }

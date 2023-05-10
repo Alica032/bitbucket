@@ -23,9 +23,9 @@ type server struct {
 func RunServer(sf *ServerFlags, tf *TelegramFlags, firstRun bool) {
 	// database := database{make(map[string]struct{}), sync.RWMutex{}}
 	url := fmt.Sprintf("%s:%d", sf.Host, sf.Port)
-	botApi := BotApi{token: tf.Token}
+	botApi := initBotApi(tf.Token)
 
-	s := server{url: url, client: &botApi}
+	s := server{url: url, client: botApi}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.goHandler)
@@ -34,8 +34,8 @@ func RunServer(sf *ServerFlags, tf *TelegramFlags, firstRun bool) {
 		for !flag {
 			time.Sleep(2 * time.Second)
 			flag = botApi.registerWebhook(sf.Ngrok)
-			log.Println("webhook is run")
 		}
+		log.Println("Webhook is run")
 	}()
 	err := http.ListenAndServe(url, mux)
 	if err != nil {
@@ -54,6 +54,6 @@ func (s *server) goHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if data.Msg.Text == "/start" {
-		s.client.startMessage(data.Msg.ChatMsg.ID, "Speak Friend and Enter")
+		s.client.startMessage(data.Msg.ChatMsg.ID)
 	}
 }
